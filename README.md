@@ -7,7 +7,7 @@ Written by [Conrad Shyu](mailto:conradshyu@hotmail.com)<br>
 their sizes. Instructions are provided to construct the database and translation table, and to download example
 WMGS sample files. The repository should include all the necessary files to construct the package.
 
-# Requirements
+## Requirements
 - PHP (5.2+)
 - bowtie2 (the latest)
 - GNU C++ compiler (4.4.7+)
@@ -15,7 +15,7 @@ WMGS sample files. The repository should include all the necessary files to cons
 - NCBI BlastN (optional; the latest)
 - GNU Plot (optional; 4.6+)
 
-# Synopsis
+## Synopsis
 This repository only contains the source code, which implements the weight Shannon equitability index (WSEI) for
 the taxonomic assignment of the short reads from whole metagenome shotgun sequencing using the Illumina solid
 platform. This approach may be ported to sequencing data generated from other platforms as long as the assumptions
@@ -70,7 +70,7 @@ first file, `sample.pivot.csv`, consolidates the taxonomic assignments on the sp
 statistical analysis should use the first file only. The second file is used to calculate the summary statistics,
 i.e., WSEI.
 
-# Construction of Database
+## Construction of Database
 Download the database from NCBI ftp server:
 
 ```
@@ -99,7 +99,7 @@ addition, the annotation of draft genomes may not be entirely correct either.
 > **Note**: It is very important to keep both the taxonomy and sequence databases coherent. Otherwise the
 assignment program will fail to identify all strains that belong to the same species.
 
-# Map the WMGS Reads
+## Map the WMGS Reads
 WSEI does not impose any restrictions on how the mapping of short reads is done. The default parameters embedded
 in bowtie work just fine. However, it is critically important to map the short reads to the full length genome
 database, instead of 16S. The very idea of WSEI is to alleviate the analysis of microbial community from the 16S
@@ -122,14 +122,14 @@ such as WMGS. At this point, the tool does not support alignment output from BLA
 addressed on the second release of the tool. The support for BLAST is actually quite simple. It is only necessary
 to implement the parser that extract the location of alignment and identity of mapped taxa.
 
-# Example WMGS Files
+## Example WMGS Files
 HMIWGS/HMASM: [Illumina WGS Reads and Assemblies](http://www.hmpdacc.org/HMASM/)
 
 The HMP performed whole metagenomic shotgun sequencing on over 1,200 samples collected from 15 to 18 body sites on
 human subjects. The human DNA should have been removed from these samples. WSEI was developed specifically to
 analyze the sample using the whole metagenomic shotgun sequencing protocol.
 
-# Author's Comments
+## Author's Comments
 The initial implementation of the algorithm requires a slew of other supporting software and files, which can be
 very cumbersome to use. The next release will address this issue and, hopefully, simplifies the use of the tool.
 Please report any problems or send comments to [me](mailto:conradshyu@hotmail.com).
