@@ -1,141 +1,98 @@
-# Taxonomic Assignment for Whole Metagenome Shotgun (WMGS) Sequencing
+# Taxonomic Assignment for Whole Metagenome Shotgun Sequencing
 
-Written by [Conrad Shyu](mailto:conradshyu@hotmail.com)<br>
-*last revised on July 4, 2020*
+Written by [Conrad Shyu](mailto:conradshyu@hotmail.com)
 
-> **Note**: This is only the source code repository. The database and sample files are not included because of
-their sizes. Instructions are provided to construct the database and translation table, and to download example
-WMGS sample files. The repository should include all the necessary files to construct the package.
+This repository contains C++ tools for processing Bowtie2 SAM alignments and assigning metagenomic reads to bacterial strains and species. The strain-level analysis uses the weighted Shannon equitability index (WSEI) to help resolve ambiguous alignments.
+
+The sequence and taxonomy databases, translation table, and example sequencing data are not included. They must be prepared separately.
 
 ## Requirements
 
-- PHP (5.2+)
-- bowtie2 (the latest)
-- GNU C++ compiler (4.4.7+)
-- Boost C++ library (1.49+)
-- NCBI BlastN (optional; the latest)
-- GNU Plot (optional; 4.6+)
+- GNU Make
+- A C++ compiler with OpenMP support (the Makefile uses `g++` and `-fopenmp`)
+- Boost C++ headers (the source includes Boost.Algorithm)
+- Bowtie2 to build an index and align reads
+- Mono or a .NET compiler/runtime, only if using the optional `fas2xlt.cs` database-preparation helper
 
-## Synopsis
+BLAST output is not supported; the parser expects Bowtie2-compatible SAM records.
 
-This repository only contains the source code, which implements the weight Shannon equitability index (WSEI) for
-the taxonomic assignment of the short reads from whole metagenome shotgun sequencing using the Illumina solid
-platform. This approach may be ported to sequencing data generated from other platforms as long as the assumptions
-are maintained.
+## Build
 
-| Filename | Description |
-| --- | --- |
-| `Makefile` | makefile for the source code |
-| `assign.cpp` | taxonomic assignment driver program |
-| `samfile.cpp` | bowtie SAM file parser |
-| `samfile.h` | header file for bowtie SAM file parser |
-| `species.cpp` | taxonomic assignment on the species level |
-| `species.h` | header file for the taxnomic assignment program |
-| `strain.cpp` | implementation of WSEI |
-| `strain.h` | header file for the implementation of WSEI |
-| `fas2xlt.cs` | fasta database and translation |
-| `README.md` | this file |
+From the repository directory, run:
 
-To compile the source code, simply type:
-
-`make`
-
-The make program will invoke the Makefile and compiles the source code. Alternatively, to compile the files
-manually, issue the command:
-
+```sh
+make
 ```
+
+This builds two programs:
+
+- `samfile` parses a SAM alignment file and writes a summary CSV.
+- `assign` calculates strain-level WSEI and species-level assignments from that summary.
+
+To build without Make:
+
+```sh
 g++ -I. -O3 samfile.cpp -o samfile -fopenmp
 g++ -I. -O3 assign.cpp strain.cpp species.cpp -o assign -fopenmp
 ```
 
-> Note: The current implementation incorporates automatic multithreading. In other words, the program will
-automatically spawn multiple instances based on the number of processor cores. Memory usage is generally not
-outrageous. However, WMGS samples are generally quite large and alignment files can be massive.
+## Prepare the database
 
-Assuming that the alignment has been done and output is saved in the SAM format, to perform the analysis, it is
-necessary first to parse the alignment SAM file. To parse the SAM file, run the following command:
+The optional `fas2xlt.cs` helper creates a FASTA file and the translation CSV required by the analysis tools. It expects `names.dmp`, `nodes.dmp`, and `gi_taxid_nucl.dmp` in the working directory, alongside directories containing the extracted genome FASTA files. It searches for `.fna` files under those directories and accepts an output prefix:
 
-```
-samfile sample.sam sample.summary.csv
+```sh
+mcs fas2xlt.cs -out:fas2xlt.exe
+mono fas2xlt.exe bacteria
 ```
 
-The parser should requires minimum memory but can be very I/O intensive because it reads and writes files
-simultaneously. After the parser completes, run the taxonomic assignment:
+The command writes `bacteria.fna` and `bacteria.csv`. Build a Bowtie2 index from the FASTA file:
 
-```
-assign translate.csv sample.summary.csv
-```
-
-The taxonomic assignment program will generate two output files, `sample.pivot.csv` and `sample.assign.csv`. The
-first file, `sample.pivot.csv`, consolidates the taxonomic assignments on the species level, and the second,
-`sample.assign.csv`, lists all candidate taxa that have been identified by the alignment program. Quantitative
-statistical analysis should use the first file only. The second file is used to calculate the summary statistics,
-i.e., WSEI.
-
-## Construction of Database
-
-Download the database from NCBI ftp server:
-
-```
-ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/all.fna.tar.gz
-```
-Sequence files are broken into two pieces because of their large sizes. The `bowtie2` databases (complete and
-draft genomes) were constructed using the following commands:
-
-- for complete genomes:
-```
-bowtie2-build -p -f bacteria00.fna bacteria00
-bowtie2-build -p -f bacteria01.fna bacteria01
+```sh
+bowtie2-build --threads 4 -f bacteria.fna bacteria
 ```
 
-- for draft genomes:
-```
-bowtie2-build -p -f draft00.fna draft00
-bowtie2-build -p -f draft01.fna draft01
-```
+Keep the translation table and sequence index in sync. The table maps the genome identifiers found in the alignment references to NCBI taxonomic identifiers and names.
 
-> **Note**: The use of draft genomes is generally not recommended because of potential errors in the sequences. In
-addition, the annotation of draft genomes may not be entirely correct either.
+## Align and analyze reads
 
-> **Note**: It is recommended to remove plasmid sequences before converting to the `bowtie` format.
+For paired-end reads, map against the full-length genome index (not a 16S database). The `--no-hd` option omits SAM header lines, which this parser does not handle:
 
-> **Note**: It is very important to keep both the taxonomy and sequence databases coherent. Otherwise the
-assignment program will fail to identify all strains that belong to the same species.
-
-## Map the WMGS Reads
-
-WSEI does not impose any restrictions on how the mapping of short reads is done. The default parameters embedded
-in bowtie work just fine. However, it is critically important to map the short reads to the full length genome
-database, instead of 16S. The very idea of WSEI is to alleviate the analysis of microbial community from the 16S
-doctrine. The use of full length genome also permits more rigorous quantitative statistical analysis on the species
-composition and population dynamics.
-
-The default parameters to run bowtie using local alignment:
-
-```
-bowtie2 --local --sensitive --threads 4 -x -1 <file1>.fq -2 <file2>.fq -S <file>.sam
+```sh
+bowtie2 --local --sensitive --threads 4 --no-hd \
+  -x bacteria -1 reads_1.fq -2 reads_2.fq -S sample.sam
 ```
 
-The parameters can be adjusted to suit specific needs. However, it is not necessary to output all possible hits.
-WSEI is only invoked if multiple best hits are present. Otherwise, only the hits with the highest percent identity
-is actually used.
+Parse the alignments, then run the assignment:
 
-Alternatively, it is possible to invoke NCBI BLASTN for the mapping of short reads. BLAST and its variants have
-long been the de facto alignment tools. However, they are generally very slow and not suitable for voluminous data
-such as WMGS. At this point, the tool does not support alignment output from BLAST yet. This issue will be
-addressed on the second release of the tool. The support for BLAST is actually quite simple. It is only necessary
-to implement the parser that extract the location of alignment and identity of mapped taxa.
+```sh
+samfile bacteria.csv sample.sam sample.summary.csv
+assign bacteria.csv sample.summary.csv
+```
 
-## Example WMGS Files
+The analysis produces three CSV files using the summary filename's prefix:
 
-HMIWGS/HMASM: [Illumina WGS Reads and Assemblies](http://www.hmpdacc.org/HMASM/)
+- `sample.strain.csv` contains strain-level abundance, coverage, Shannon index, and WSEI.
+- `sample.pivot.csv` aggregates read assignments and alignment statistics by species.
+- `sample.assign.csv` lists the selected species assignment and alignment statistics for each read.
 
-The HMP performed whole metagenomic shotgun sequencing on over 1,200 samples collected from 15 to 18 body sites on
-human subjects. The human DNA should have been removed from these samples. WSEI was developed specifically to
-analyze the sample using the whole metagenomic shotgun sequencing protocol.
+Use the species-level `*.pivot.csv` file for quantitative species-abundance analysis. The per-read `*.assign.csv` file provides assignment details; `*.strain.csv` contains strain-level WSEI statistics.
 
-## Comments
+## Source files
 
-The initial implementation of the algorithm requires a slew of other supporting software and files, which can be
-very cumbersome to use. The next release will address this issue and, hopefully, simplifies the use of the tool.
-Please report any problems or send comments to [me](mailto:conradshyu@hotmail.com).
+| File | Purpose |
+| --- | --- |
+| `Makefile` | Builds the C++ programs |
+| `samfile.cpp`, `samfile.h` | Parse SAM alignments and produce a summary CSV |
+| `assign.cpp` | Load the translation table and run both assignment stages |
+| `strain.cpp`, `strain.h` | Calculate strain-level coverage and WSEI |
+| `species.cpp`, `species.h` | Resolve assignments and summarize results by species |
+| `table.h` | Translation-table record definition and CSV parsing |
+| `pivot.h` | Alignment and assignment summary record |
+| `fas2xlt.cs` | Optional FASTA and translation-table preparation helper |
+| `LICENSE` | License terms |
+
+## Example data
+
+Example human microbiome whole-genome shotgun reads and assemblies are available from the [Human Microbiome Project](http://www.hmpdacc.org/HMASM/). The project removed human DNA from its samples; WSEI was developed for whole-metagenome shotgun data.
+
+For questions or problems, contact [Conrad Shyu](mailto:conradshyu@hotmail.com).
