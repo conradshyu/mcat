@@ -8,6 +8,7 @@ their sizes. Instructions are provided to construct the database and translation
 WMGS sample files. The repository should include all the necessary files to construct the package.
 
 ## Requirements
+
 - PHP (5.2+)
 - bowtie2 (the latest)
 - GNU C++ compiler (4.4.7+)
@@ -16,6 +17,7 @@ WMGS sample files. The repository should include all the necessary files to cons
 - GNU Plot (optional; 4.6+)
 
 ## Synopsis
+
 This repository only contains the source code, which implements the weight Shannon equitability index (WSEI) for
 the taxonomic assignment of the short reads from whole metagenome shotgun sequencing using the Illumina solid
 platform. This approach may be ported to sequencing data generated from other platforms as long as the assumptions
@@ -71,6 +73,7 @@ statistical analysis should use the first file only. The second file is used to 
 i.e., WSEI.
 
 ## Construction of Database
+
 Download the database from NCBI ftp server:
 
 ```
@@ -100,6 +103,7 @@ addition, the annotation of draft genomes may not be entirely correct either.
 assignment program will fail to identify all strains that belong to the same species.
 
 ## Map the WMGS Reads
+
 WSEI does not impose any restrictions on how the mapping of short reads is done. The default parameters embedded
 in bowtie work just fine. However, it is critically important to map the short reads to the full length genome
 database, instead of 16S. The very idea of WSEI is to alleviate the analysis of microbial community from the 16S
@@ -123,32 +127,15 @@ addressed on the second release of the tool. The support for BLAST is actually q
 to implement the parser that extract the location of alignment and identity of mapped taxa.
 
 ## Example WMGS Files
+
 HMIWGS/HMASM: [Illumina WGS Reads and Assemblies](http://www.hmpdacc.org/HMASM/)
 
 The HMP performed whole metagenomic shotgun sequencing on over 1,200 samples collected from 15 to 18 body sites on
 human subjects. The human DNA should have been removed from these samples. WSEI was developed specifically to
 analyze the sample using the whole metagenomic shotgun sequencing protocol.
 
-## Author's Comments
+## Comments
+
 The initial implementation of the algorithm requires a slew of other supporting software and files, which can be
 very cumbersome to use. The next release will address this issue and, hopefully, simplifies the use of the tool.
 Please report any problems or send comments to [me](mailto:conradshyu@hotmail.com).
-
----
-Copyright (C) 2015 [Conrad Shyu](mailto:conradshyu@hotmail.com)<br>
-Center for the Study of Biological Complexity<br>
-Department of Microbiology and Immunology<br>
-Virginia Commonwealth University<br>
-Richmond, Virginia 23298<br>
-
----
-This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
-License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
-later version.
-
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
-warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
-details.
-
-You should have received a copy of the GNU General Public License along with this program. If not, see
-<http://www.gnu.org/licenses/>.
